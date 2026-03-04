@@ -1,0 +1,18 @@
+{
+  "name": "@tempt/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report",
+    "coverage": "forge coverage",
+    "fmt": "forge fmt",
+    "deploy:testnet": "forge script script/Deploy.s.sol --rpc-url tempo_testnet --broadcast --verify",
+    "typechain": "typechain --target=ethers-v6 out/**/*.json --out-dir ../packages/contracts/src"
+  },
+  "devDependencies": {
+    "@typechain/ethers-v6": "^0.5.1",
+    "typechain": "^8.3.2"
+  }
+}

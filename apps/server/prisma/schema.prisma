@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER
+// ============================================================================
+
+model User {
+  id            String   @id @default(cuid())
+  walletAddress String   @unique
+  displayName   String?
+  bio           String?
+  avatarUrl     String?
+  role          UserRole @default(BUYER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  listedAgents Agent[]    @relation("SellerAgents")
+  purchases    Purchase[]
+  reviews      Review[]
+  disputes     Dispute[]  @relation("BuyerDisputes")
+}
+
+enum UserRole {
+  BUYER
+  SELLER
+  BOTH
+  ADMIN
+}
+
+// ============================================================================
+// AGENT
+// ============================================================================
+
+model Agent {
+  id              String        @id @default(cuid())
+  onChainId       Int?          @unique // ID from AgentRegistry contract
+  slug            String        @unique
+  name            String
+  description     String
+  doesNotDo       String // Mandatory - what the agent cannot do
+  category        AgentCategory
+  tags            String[]
+
+  // Prompt (encrypted)
+  encryptedPrompt String // AES-256 encrypted
+  promptTemplate  String?
+
+  // Input/Output definition
+  inputs       Json // AgentInput[] serialized
+  outputFormat OutputFormat
+
+  // Demos
+  demos Json // Demo[] serialized
+
+  // Pricing
+  price        BigInt // In TIP-20 token units (6 decimals)
+  paymentToken String // TIP-20 token address
+  licenseType  LicenseType
+  usageLimit   Int?
+
+  // Execution config
+  llmProvider String
+  llmModel    String
+  maxTokens   Int
+  temperature Float
+
+  // Status
+  status AgentStatus @default(PENDING_REVIEW)
+
+  // Stats (denormalized for performance)
+  totalSales      Int   @default(0)
+  totalExecutions Int   @default(0)
+  acceptanceRate  Float @default(0)
+  disputeRate     Float @default(0)
+  repeatBuyerRate Float @default(0)
+
+  // Relations
+  sellerId   String
+  seller     User           @relation("SellerAgents", fields: [sellerId], references: [id])
+  purchases  Purchase[]
+  reviews    Review[]
+  executions Execution[]
+  versions   AgentVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AgentCategory {
+  WRITING
+  CODING
+  ART
+  AUTOMATION
+  RESEARCH
+  OTHER
+}
+
+enum OutputFormat {
+  TEXT
+  MARKDOWN
+  CODE
+  JSON
+  STRUCTURED
+}
+
+enum LicenseType {
+  ONE_TIME
+  USAGE_BASED
+}
+
+enum AgentStatus {
+  PENDING_REVIEW
+  APPROVED
+  LISTED
+  DELISTED
+  REJECTED
+}
+
+// ============================================================================
+// PURCHASE
+// ============================================================================
+
+model Purchase {
+  id       String  @id @default(cuid())
+  escrowId Int?    @unique // ID from MarketplaceEscrow contract
+  txHash   String? // On-chain transaction hash
+
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id])
+  buyerId String
+  buyer   User   @relation(fields: [buyerId], references: [id])
+
+  amount       BigInt
+  paymentToken String
+
+  status          PurchaseStatus @default(ESCROWED)
+  usagesRemaining Int? // For usage-based agents
+  autoReleaseAt   DateTime
+
+  acceptedAt DateTime?
+  disputedAt DateTime?
+  resolvedAt DateTime?
+
+  review     Review?
+  disputes   Dispute[]
+  executions Execution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PurchaseStatus {
+  ESCROWED
+  ACCEPTED
+  DISPUTED
+  REFUNDED
+  AUTO_RELEASED
+}
+
+// ============================================================================
+// EXECUTION
+// ============================================================================
+
+model Execution {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  agentId    String
+  agent      Agent    @relation(fields: [agentId], references: [id])
+
+  inputHash  String // SHA-256 hash of input
+  outputHash String // SHA-256 hash of output
+  rawInput   String? // Temporary — deleted after dispute window
+  rawOutput  String? // Temporary — deleted after dispute window
+
+  durationMs Int // Execution time
+  success    Boolean
+  errorType  String?
+
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// REVIEW
+// ============================================================================
+
+model Review {
+  id         String   @id @default(cuid())
+  purchaseId String   @unique
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  agentId    String
+  agent      Agent    @relation(fields: [agentId], references: [id])
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+
+  // Structured
+  didWhatItClaimed ClaimResult
+  wasSetupClear    Boolean
+  wouldUseAgain    Boolean
+
+  // Free text
+  whatWorked String?
+  whatDidnt  String?
+
+  createdAt DateTime @default(now())
+}
+
+enum ClaimResult {
+  YES
+  PARTIALLY
+  NO
+}
+
+// ============================================================================
+// DISPUTE
+// ============================================================================
+
+model Dispute {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  buyerId    String
+  buyer      User     @relation("BuyerDisputes", fields: [buyerId], references: [id])
+
+  reason     String
+  evidence   String? // Description of the issue
+  status     DisputeStatus @default(OPEN)
+  resolution String? // Admin resolution notes
+  refunded   Boolean       @default(false)
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+// ============================================================================
+// AGENT VERSION
+// ============================================================================
+
+model AgentVersion {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  version   Int
+  changelog String
+  createdAt DateTime @default(now())
+}
