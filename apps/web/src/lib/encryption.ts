@@ -36,7 +36,7 @@ export function encryptPrompt(plaintext: string): string {
 /**
  * Decrypt a prompt encrypted by encryptPrompt.
  * SECURITY: This function MUST only be called server-side.
- * The decrypted prompt NEVER leaves the server — never log it,
+ * The decrypted prompt NEVER leaves the server. Never log it,
  * never return it in API responses, never store it in plain text.
  */
 export function decryptPrompt(encryptedData: string): string {

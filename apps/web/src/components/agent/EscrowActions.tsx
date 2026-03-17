@@ -205,7 +205,6 @@ export function EscrowActions({
   const sellerReceives =
     priceBigInt - (priceBigInt * BigInt(ESCROW_CONFIG.PLATFORM_FEE_BPS)) / 10000n
 
-  // — Already accepted or disputed —
   if (purchase.status === 'accepted' || purchase.status === 'auto_released') {
     return (
       <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4">

@@ -26,7 +26,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 export default async function AgentPage({ params }: AgentPageProps): Promise<React.ReactElement> {
   const { slug } = await params
 
-  // Fetch agent — accept slug or ID
+  // Accepts slug or cuid ID
   const agent = await prisma.agent.findFirst({
     where: {
       OR: [{ slug }, { id: slug }],

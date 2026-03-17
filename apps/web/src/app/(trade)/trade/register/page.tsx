@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseUnits } from 'viem'
+import { parseUnits, createPublicClient, http, decodeEventLog } from 'viem'
+import { tempoTestnet } from '@/lib/tempo'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Lock, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -54,6 +55,17 @@ const REGISTRY_ABI = [
       { name: 'supplyCap', type: 'uint256' },
     ],
     outputs: [{ name: 'agentId', type: 'uint256' }],
+  },
+  {
+    name: 'AgentRegistered',
+    type: 'event',
+    inputs: [
+      { name: 'agentId', type: 'uint256', indexed: true },
+      { name: 'creator', type: 'address', indexed: true },
+      { name: 'metadataUri', type: 'string', indexed: false },
+      { name: 'codeHash', type: 'bytes32', indexed: false },
+      { name: 'supplyCap', type: 'uint256', indexed: false },
+    ],
   },
 ] as const
 
@@ -126,10 +138,25 @@ export default function RegisterAgentPage(): React.ReactElement {
       })
       setTxHash(registerTx)
 
-      // Step 4: Record in DB
+      // Step 4: Parse AgentRegistered event from receipt to get on-chain agentId
       setTxStatus('recording')
-      // In production: parse AgentRegistered event for agentId
-      const onChainAgentId = Math.floor(Math.random() * 10000) // placeholder, parse from event
+      const publicClient = createPublicClient({ chain: tempoTestnet, transport: http() })
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: registerTx })
+      let onChainAgentId = 0
+      for (const log of receipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: REGISTRY_ABI,
+            eventName: 'AgentRegistered',
+            data: log.data,
+            topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
+          })
+          onChainAgentId = Number(decoded.args.agentId)
+          break
+        } catch {
+          // Not the AgentRegistered event; skip
+        }
+      }
 
       const res = await fetch('/api/trade/agents', {
         method: 'POST',
@@ -232,7 +259,7 @@ export default function RegisterAgentPage(): React.ReactElement {
             <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="codeHash">Code Hash <span className="text-xs text-muted-foreground">(optional — hash of your agent prompt for verifiability)</span></Label>
+            <Label htmlFor="codeHash">Code Hash <span className="text-xs text-muted-foreground">(optional, SHA-256 hash of your agent prompt for verifiability)</span></Label>
             <Input id="codeHash" value={codeHash} onChange={(e) => setCodeHash(e.target.value)} placeholder="sha256:..." className="font-mono text-xs" />
           </div>
           <Button

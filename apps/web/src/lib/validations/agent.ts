@@ -16,7 +16,7 @@ export const agentDemoSchema = z.object({
 })
 
 /**
- * Create agent schema. systemPrompt is plaintext here — encrypted server-side
+ * Create agent schema. systemPrompt is plaintext here; encrypted server-side
  * before DB insert. Never stored as plaintext.
  */
 export const createAgentSchema = z.object({
@@ -75,7 +75,7 @@ export const createAgentSchema = z.object({
 export type CreateAgentInput = z.infer<typeof createAgentSchema>
 
 /**
- * Update schema — all fields optional. Prompt updates go through
+ * Update schema. All fields optional. Prompt updates go through
  * a separate versioning flow, not this endpoint.
  */
 export const updateAgentSchema = z.object({

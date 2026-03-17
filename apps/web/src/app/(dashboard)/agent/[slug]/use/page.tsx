@@ -116,7 +116,6 @@ export default function UseAgentPage(): React.ReactElement {
     setUsagesRemaining(result.usagesRemaining)
   }
 
-  // — Loading —
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-8">
@@ -126,7 +125,6 @@ export default function UseAgentPage(): React.ReactElement {
     )
   }
 
-  // — No access —
   if (!accessData?.hasAccess) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-16 text-center">
@@ -201,7 +199,7 @@ export default function UseAgentPage(): React.ReactElement {
           />
         </div>
 
-        {/* Right: Escrow status + actions — sticky */}
+        {/* Right: Escrow status + actions */}
         <div className="lg:self-start lg:sticky lg:top-24">
           {purchase ? (
             <div className="rounded-lg border border-border bg-card p-5">
@@ -220,7 +218,7 @@ export default function UseAgentPage(): React.ReactElement {
             </div>
           ) : null}
 
-          {/* Mobile sticky accept FAB — shown after first run on mobile */}
+          {/* Mobile sticky accept FAB */}
           {hasRunOnce && activePurchase && (
             <div className="fixed bottom-6 right-6 lg:hidden">
               <Button

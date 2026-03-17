@@ -4,10 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { decryptPrompt, hashData } from '@/lib/encryption'
 
-// ============================================================
-// In-memory rate limiter (per user per agent, 10 req/min)
-// In production, replace with Redis-backed rate limiting.
-// ============================================================
+// In-memory rate limiter (per user per agent, 10 req/min). Replace with Redis in production.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
 function checkRateLimit(key: string, maxPerMinute: number): boolean {
@@ -27,7 +24,6 @@ function checkRateLimit(key: string, maxPerMinute: number): boolean {
   return true
 }
 
-// Periodically clean up expired rate limit entries to avoid memory leak
 setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of rateLimitMap.entries()) {
@@ -35,16 +31,11 @@ setInterval(() => {
   }
 }, 5 * 60_000)
 
-// ============================================================
-// Validation
-// ============================================================
 const executeSchema = z.object({
   input: z.record(z.string(), z.unknown()),
 })
 
-// ============================================================
-// LLM callers (server-side only — never called from client)
-// ============================================================
+// LLM callers (server-side only, never called from client)
 interface LLMParams {
   systemPrompt: string
   userMessage: string
@@ -77,7 +68,7 @@ async function callOpenAI(params: LLMParams): Promise<string> {
   })
 
   if (!res.ok) {
-    // Do NOT forward the raw error — it might contain API key details
+    // Do not forward the raw error; it may contain API key details
     throw new Error(`LLM call failed (${res.status})`)
   }
 
@@ -119,16 +110,12 @@ async function callAnthropic(params: LLMParams): Promise<string> {
   return data.content?.find((c) => c.type === 'text')?.text ?? ''
 }
 
-// ============================================================
-// Route handler
-// ============================================================
 type RouteContext = { params: Promise<{ id: string }> }
 
 export async function POST(
   request: NextRequest,
   context: RouteContext
 ): Promise<NextResponse> {
-  // 1. Authenticate
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ message: 'Authentication required' }, { status: 401 })
@@ -136,7 +123,6 @@ export async function POST(
 
   const { id: agentId } = await context.params
 
-  // 2. Rate limit — 10 executions per minute per user per agent
   const rateLimitKey = `exec:${session.user.id}:${agentId}`
   if (!checkRateLimit(rateLimitKey, 10)) {
     return NextResponse.json(
@@ -145,7 +131,6 @@ export async function POST(
     )
   }
 
-  // 3. Parse input
   let body: unknown
   try {
     body = await request.json()
@@ -160,7 +145,6 @@ export async function POST(
 
   const { input } = parsed.data
 
-  // 4. Authorize — verify the user has an active purchase for this agent
   const purchase = await prisma.purchase.findFirst({
     where: {
       agentId,
@@ -176,16 +160,14 @@ export async function POST(
   })
 
   if (!purchase) {
-    // Return 403 without revealing if agent exists
+    // Return 403 without revealing whether the agent exists
     return NextResponse.json({ message: 'Access denied' }, { status: 403 })
   }
 
-  // 5. Check usage limits
   if (purchase.usagesRemaining !== null && purchase.usagesRemaining <= 0) {
     return NextResponse.json({ message: 'Usage limit reached for this purchase' }, { status: 403 })
   }
 
-  // 6. Retrieve agent — MUST include encryptedPrompt
   const agent = await prisma.agent.findUnique({
     where: { id: agentId },
     select: {
@@ -208,9 +190,8 @@ export async function POST(
   const startTime = Date.now()
   let systemPrompt: string
 
-  // 7. Decrypt prompt — server-side only
   // SECURITY: systemPrompt NEVER leaves this function.
-  // Do NOT log it, return it, or include it in error messages.
+  // Do not log it, return it, or include it in any error message.
   try {
     systemPrompt = decryptPrompt(agent.encryptedPrompt)
   } catch {
@@ -221,25 +202,20 @@ export async function POST(
     )
   }
 
-  // 8. Build user message from input
   let userMessage: string
   if (agent.promptTemplate) {
-    // Replace {{fieldName}} placeholders with user input values
     userMessage = agent.promptTemplate.replace(
       /\{\{(\w+)\}\}/g,
       (_, key: string) => String(input[key] ?? '')
     )
   } else {
-    // Format input as structured text
     userMessage = Object.entries(input)
       .map(([k, v]) => `${k}: ${String(v)}`)
       .join('\n')
   }
 
-  // Hash for logging — never log raw input
   const inputHash = hashData(JSON.stringify(input))
 
-  // 9. Call LLM (server-side only)
   let output = ''
   let success = false
   let errorType: string | null = null
@@ -272,14 +248,13 @@ export async function POST(
     success = true
   } catch (err) {
     errorType = err instanceof Error ? err.constructor.name : 'UnknownError'
-    console.error('[execute] LLM call failed for agent:', agentId, '— type:', errorType)
-    // SECURITY: Do NOT return err.message — it might expose LLM internals
+    console.error('[execute] LLM call failed for agent:', agentId, ', type:', errorType)
+    // Do not return err.message; it may expose LLM internals
   }
 
   const durationMs = Date.now() - startTime
   const outputHash = success ? hashData(output) : ''
 
-  // 10. Log execution — hashed, never raw
   try {
     await prisma.$transaction(async (tx) => {
       await tx.execution.create({
@@ -288,7 +263,7 @@ export async function POST(
           agentId,
           inputHash,
           outputHash,
-          // Store raw data temporarily for dispute resolution — auto-cleanup after 14 days
+          // Stored temporarily for dispute resolution, purged after 14 days
           rawInput: JSON.stringify(input),
           rawOutput: success ? output : null,
           durationMs,
@@ -297,7 +272,6 @@ export async function POST(
         },
       })
 
-      // 11. Decrement usage for usage-based agents on success only
       if (
         success &&
         agent.licenseType === 'USAGE_BASED' &&
@@ -309,7 +283,6 @@ export async function POST(
         })
       }
 
-      // Increment agent execution count
       await tx.agent.update({
         where: { id: agentId },
         data: { totalExecutions: { increment: 1 } },
@@ -320,7 +293,6 @@ export async function POST(
     console.error('[execute] Failed to log execution:', dbError)
   }
 
-  // 12. Return response
   if (!success) {
     return NextResponse.json(
       { message: 'Agent execution failed. This use was not counted. Please try again.' },
@@ -328,7 +300,6 @@ export async function POST(
     )
   }
 
-  // Calculate updated usage count
   const usagesRemaining =
     agent.licenseType === 'USAGE_BASED' && purchase.usagesRemaining !== null
       ? purchase.usagesRemaining - 1

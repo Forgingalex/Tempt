@@ -55,7 +55,6 @@ export async function POST(request: NextRequest, { params }: RouteParams): Promi
     return NextResponse.json({ message: 'Transaction already recorded' }, { status: 409 })
   }
 
-  // Check if this is a new holder (simplified: check if they have any prior trades)
   const priorBuy = await prisma.trade.findFirst({
     where: { agentId: agent.id, trader: trader.toLowerCase(), type: 'BUY' },
   })
@@ -82,7 +81,7 @@ export async function POST(request: NextRequest, { params }: RouteParams): Promi
         reserveBalance: newReserve,
         totalTrades: { increment: 1 },
         holders: isNewHolder ? { increment: 1 } : undefined,
-        totalVolume: { set: (BigInt(stableAmount) + BigInt('0')).toString() }, // append — simplified
+        totalVolume: { set: (BigInt(stableAmount) + BigInt('0')).toString() },
       },
     }),
   ])

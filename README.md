@@ -1,124 +1,151 @@
 # Tempt
 
-**The peer-to-peer marketplace for AI agents powered by hidden prompts.**
+> Peer-to-peer marketplace for AI agents on Tempo blockchain. Prompts stay encrypted. Payments go on-chain.
 
-Tempt lets creators build and sell AI agents without exposing their prompts. Buyers purchase working AI behaviors with escrowed payments on Tempo blockchain — prompts stay encrypted end-to-end.
+[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)](./LICENSE)
+[![Network](https://img.shields.io/badge/network-Tempo%20Testnet-blue)](https://explore.tempo.xyz)
+[![Chain ID](https://img.shields.io/badge/chain%20ID-42431-blue)](https://docs.tempo.xyz)
 
-## Overview
+---
 
-Tempt is a marketplace where prompt engineers monetize their expertise by wrapping prompts into sellable AI agents. Buyers get working AI tools without prompt trial-and-error. Every transaction is secured through on-chain escrow with a 7-day acceptance window, structured outcome-based reviews, and reputation scoring — no star ratings, no guesswork.
+## What Is Tempt
 
-Sellers never have their prompts exposed. Buyers always have recourse. The platform enforces quality systemically.
+Tempt is an on-chain marketplace where prompt engineers list and sell AI agents as products. Sellers configure an agent with a hidden system prompt, define its inputs, and set a price. Buyers purchase access through a TIP-20 escrow and interact with the agent via a controlled interface. The underlying prompt is never exposed at any point in the flow.
 
-## Features
+Payments are held in escrow until the buyer accepts the output or the 7-day window lapses. Every listing requires structured outcome disclosures, not star ratings.
 
-- **Prompt Privacy**: Seller prompts encrypted with AES-256-GCM, decrypted only server-side during execution
-- **On-Chain Escrow**: Funds held in TIP-20 tokens until buyer accepts or 7-day auto-release
-- **Structured Reviews**: Outcome-based reviews ("Did it do what it claimed?"), not star ratings
-- **Reputation System**: Acceptance rates, dispute rates, repeat buyer %, version recency
-- **Multi-Provider AI**: Agents can run on OpenAI or Anthropic models
-- **Mandatory Disclosure**: Every agent must declare what it does NOT do — equally prominent as what it does
-- **Pre-Listing Review**: Automated checks + manual review before agents go live
-- **Wallet Auth**: Sign-In with Ethereum (SIWE) adapted for Tempo chain
+---
 
-## Architecture
+## How It Works
 
 ```
-Buyer → Frontend → API Route → Decrypt Prompt → LLM (OpenAI/Anthropic) → Output
-                       ↕
-                   PostgreSQL (encrypted prompts, metadata, reviews)
-                       ↕
-              Tempo Blockchain (escrow, agent registry, payments)
+Buyer purchases agent
+        |
+        v
+TIP-20 funds locked in MarketplaceEscrow contract
+        |
+        v
+Buyer submits input via usage interface
+        |
+        v
+Backend decrypts prompt (server-side only) + calls LLM
+        |
+        v
+Output returned to buyer
+        |
+        v
+Buyer accepts  -->  funds released to seller
+Buyer disputes -->  admin reviews, refund or release
+No action (7d) -->  auto-release to seller
 ```
 
-### Components
+---
 
-- **Frontend**: Next.js 14 App Router + wagmi v2 + viem (marketplace UI, studio, usage interface)
-- **API Layer**: Next.js API routes as BFF (auth, agent CRUD, execution proxy)
-- **Backend Services**: Express.js (agent execution, blockchain events, job queues)
-- **Smart Contracts**: Solidity on Tempo (AgentRegistry, MarketplaceEscrow)
-- **Database**: PostgreSQL via Prisma (users, agents, purchases, reviews, disputes)
+## Contracts
 
-## Project Structure
+All contracts are deployed on **Tempo Testnet (Moderato)**, Chain ID `42431`.
+
+### Marketplace
+
+| Contract | Address |
+|---|---|
+| AgentRegistry | [`0x6bce4e90bEc7A3d8D9D646D9beA657e700Ad0D11`](https://explore.tempo.xyz/address/0x6bce4e90bEc7A3d8D9D646D9beA657e700Ad0D11) |
+| MarketplaceEscrow | [`0xA46B761cEcA718c75BB1Afc1A912672b6bdA720A`](https://explore.tempo.xyz/address/0xA46B761cEcA718c75BB1Afc1A912672b6bdA720A) |
+
+### Trade System
+
+| Contract | Address |
+|---|---|
+| BondingCurveMarket | [`0x59e85cE7B05d4ec217C4888697401f37eaEa71eF`](https://explore.tempo.xyz/address/0x59e85cE7B05d4ec217C4888697401f37eaEa71eF) |
+| TradingVault | [`0xdcF47dD540a09Ef4aEbDfa3cf3501AB3ea71a1ac`](https://explore.tempo.xyz/address/0xdcF47dD540a09Ef4aEbDfa3cf3501AB3ea71a1ac) |
+| ShareTokenFactory | [`0x0ecD56d3B7618CcEe2c5108122Fa633a8Dae7e6D`](https://explore.tempo.xyz/address/0x0ecD56d3B7618CcEe2c5108122Fa633a8Dae7e6D) |
+| TradeAgentRegistry | [`0xDA08b44Ab0A228e90cE9BD000EF0e91b2C5Cf2A3`](https://explore.tempo.xyz/address/0xDA08b44Ab0A228e90cE9BD000EF0e91b2C5Cf2A3) |
+| FeeRouter | [`0x241aA3CD541D042f8233d75Bd6b7bf8497141bAD`](https://explore.tempo.xyz/address/0x241aA3CD541D042f8233d75Bd6b7bf8497141bAD) |
+| StakingAndSlashing | [`0xe797c58107d83Bc3F452A4BBc18a24C01b27A4d4`](https://explore.tempo.xyz/address/0xe797c58107d83Bc3F452A4BBc18a24C01b27A4d4) |
+
+### Tempo Testnet Stablecoins
+
+| Token | Address |
+|---|---|
+| PathUSD | `0x20C0000000000000000000000000000000000000` |
+| AlphaUSD (default) | `0x20C0000000000000000000000000000000000001` |
+| BetaUSD | `0x20C0000000000000000000000000000000000002` |
+| ThetaUSD | `0x20C0000000000000000000000000000000000003` |
+
+Testnet funds: use `tempo_fundAddress` RPC method or the Tempo faucet.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui |
+| Wallet | wagmi v2, viem, SIWE |
+| State | Zustand, TanStack Query |
+| Backend | Node.js 20, Express, Prisma, PostgreSQL, Redis, BullMQ |
+| Contracts | Solidity, Foundry, OpenZeppelin v4.9.6 |
+| Chain | Tempo Testnet (Moderato), TIP-20 tokens |
+| Auth | NextAuth.js v5, SIWE |
+
+---
+
+## Repository Layout
 
 ```
 tempt/
 ├── apps/
-│   ├── web/              # Next.js frontend + API routes
-│   │   ├── app/          # App Router (marketplace, dashboard, studio, API)
-│   │   ├── components/   # UI, marketplace, studio, layout components
-│   │   ├── hooks/        # Auth, queries, token balance, studio hooks
-│   │   ├── lib/          # Tempo config, auth, DB, encryption, utils
-│   │   └── stores/       # Zustand state (agent filters, wallet)
-│   └── server/           # Backend services
-│       ├── services/     # Agent executor, encryption, blockchain
-│       ├── prisma/       # Schema, migrations
-│       └── queue/        # BullMQ job processors
-├── contracts/            # Solidity smart contracts (Foundry)
-│   ├── src/              # AgentRegistry, MarketplaceEscrow
-│   ├── test/             # Foundry tests
-│   └── script/           # Deployment scripts
-├── packages/
-│   └── types/            # Shared TypeScript types
-└── turbo.json            # Turborepo config
+│   ├── web/                    # Next.js app (marketplace, studio, trade, usage interface)
+│   │   ├── app/                # App Router pages and API routes
+│   │   ├── components/         # Marketplace, agent, studio, trade, layout components
+│   │   ├── lib/                # Chain config, auth, DB client, encryption
+│   │   ├── hooks/              # wagmi, query, and auth hooks
+│   │   └── stores/             # Zustand stores
+│   └── server/                 # Express backend (execution service, queue processors)
+│       └── prisma/             # Schema and migrations
+├── contracts/
+│   ├── src/                    # AgentRegistry, MarketplaceEscrow, trade contracts
+│   ├── test/                   # Foundry tests (27 passing)
+│   └── script/                 # Deployment scripts
+└── packages/
+    └── types/                  # Shared TypeScript types
 ```
 
-## Quick Start
+---
 
-### Prerequisites
+## Local Development
 
-- Node.js 20+
-- npm 9+
-- PostgreSQL
-- Redis
-- Foundry (for smart contracts)
+**Prerequisites:** Node.js 20+, PostgreSQL, Redis, [Foundry](https://book.getfoundry.sh)
 
-### Installation
+```bash
+# 1. Clone
+git clone https://github.com/Forgingalex/tempt.git
+cd tempt
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Forgingalex/tempt.git
-   cd tempt
-   ```
+# 2. Install
+npm install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# 3. Configure environment
+cp .env.example .env
+# Edit .env: DATABASE_URL, REDIS_URL, PROMPT_ENCRYPTION_KEY, NEXTAUTH_SECRET, LLM API keys
 
-3. **Configure environment**
-   ```bash
-   cp .env.example .env
-   ```
+# 4. Database setup
+cd apps/server
+npx prisma generate
+npx prisma db push
+cd ../..
 
-   Edit `.env` with your values:
-   ```env
-   DATABASE_URL=postgresql://...
-   REDIS_URL=redis://localhost:6379
-   PROMPT_ENCRYPTION_KEY=your-secret-key
-   NEXTAUTH_SECRET=your-nextauth-secret
-   OPENAI_API_KEY=sk-...
-   ```
+# 5. Start frontend (Terminal 1)
+npm run dev --workspace=apps/web
+# http://localhost:3000
 
-4. **Set up database**
-   ```bash
-   cd apps/server && npx prisma generate && npx prisma db push
-   ```
+# 6. Start backend (Terminal 2)
+npm run dev --workspace=apps/server
+```
 
-### Running
+---
 
-1. **Start the frontend** (Terminal 1)
-   ```bash
-   npm run dev --workspace=apps/web
-   ```
-   Open http://localhost:3000
-
-2. **Start the backend** (Terminal 2)
-   ```bash
-   npm run dev --workspace=apps/server
-   ```
-
-### Smart Contracts
+## Smart Contracts
 
 ```bash
 cd contracts
@@ -126,89 +153,72 @@ cd contracts
 # Build
 forge build
 
-# Test
-forge test
+# Run tests
+forge test -vv
 
-# Deploy to Tempo Testnet
-forge script script/Deploy.s.sol --rpc-url https://rpc.moderato.tempo.xyz --broadcast
+# Deploy (Tempo Testnet)
+# Note: use cast send --create instead of forge script --broadcast
+# forge script has gas estimation issues on Tempo
+cast send --create $(forge inspect ContractName bytecode) \
+  --rpc-url https://rpc.moderato.tempo.xyz \
+  --private-key $DEPLOYER_PRIVATE_KEY
 ```
 
-## Tempo Chain Details
+**Foundry config notes for Tempo:**
+- `evm_version = "paris"` in `foundry.toml` (Tempo does not support PUSH0 or MCOPY)
+- OpenZeppelin v4.9.6 required (v5+ uses `mcopy` opcode)
+- Contract deployments cost 5-10x more gas than Ethereum; set limits accordingly
+
+---
+
+## Tempo Chain Reference
 
 | Property | Value |
-|----------|-------|
-| **Network** | Tempo Testnet (Moderato) |
-| **Chain ID** | `42431` |
-| **RPC URL** | `https://rpc.moderato.tempo.xyz` |
-| **Explorer** | `https://explore.tempo.xyz` |
-| **Token Standard** | TIP-20 (6 decimals, not 18) |
-| **Gas** | No native gas token — fees paid in TIP-20 stablecoins |
+|---|---|
+| Network | Tempo Testnet (Moderato) |
+| Chain ID | `42431` |
+| RPC | `https://rpc.moderato.tempo.xyz` |
+| Explorer | `https://explore.tempo.xyz` |
+| Token standard | TIP-20 (6 decimals) |
+| Gas token | None; fees paid in TIP-20 stablecoins |
+| Docs | `https://docs.tempo.xyz` |
 
-Testnet stablecoins (pathUSD, AlphaUSD, BetaUSD, ThetaUSD) available via faucet or `tempo_fundAddress` RPC method.
+TIP-20 uses **6 decimals**, not 18. Use `parseUnits(amount, 6)` and `formatUnits(amount, 6)` for all token math.
 
-## Trust Model
-
-The platform enforces trust through four layers:
-
-1. **Pre-Listing Review** — Agents must pass automated checks and manual review before going live
-2. **Mandatory Demos & Disclosure** — Minimum 2 input/output demos, mandatory "what it does NOT do" section
-3. **Escrow + Acceptance** — Buyer funds held on-chain until explicit acceptance or 7-day auto-release
-4. **Outcome-Based Reviews** — "Did it do what it claimed?" / "Would you use it again?" — aggregated as percentages
-
-Agents with >20% dispute rate get flagged. >40% gets auto-delisted.
+---
 
 ## Security
 
-- **Prompt encryption**: AES-256-GCM at rest, decrypted only during server-side execution
-- **Zero client exposure**: Prompts never touch the frontend, API responses, or browser dev tools
-- **Server-side LLM calls**: No client-side API keys for AI providers
-- **Input hashing**: Execution logs store SHA-256 hashes, raw data expires after dispute window
-- **Wallet auth**: SIWE with nonce validation and chain ID verification
+**Prompt confidentiality**
 
-## Development Status
+System prompts are encrypted with AES-256-GCM before storage. Decryption happens exclusively on the server, inside the execution route, immediately before the LLM call. The plaintext prompt is never written to logs, never returned in API responses, and never present in any client-side state.
 
-### Completed
-- Monorepo scaffolding (Turborepo, workspaces)
-- Tempo chain configuration + wallet connection (wagmi v2)
-- Authentication (SIWE via NextAuth.js v5)
-- Database schema (Prisma — full model for users, agents, purchases, reviews, disputes)
-- Encryption service (AES-256-GCM encrypt/decrypt/hash)
-- Agent execution service (OpenAI + Anthropic providers)
-- Marketplace pages (Home, Explore, Agent Detail)
-- Seller Studio (dashboard, multi-step agent creation form)
-- Agent CRUD API routes (create, read, update, delist)
-- Seller dashboard API (agents + aggregated stats)
-- Smart contract stubs (AgentRegistry, MarketplaceEscrow)
+**Execution logging**
 
-### In Progress
-- Purchase flow (on-chain escrow + DB sync)
-- Agent execution via API (post-purchase usage interface)
-- Escrow acceptance/dispute flow
-- Structured review submission + aggregation
-- Pre-listing automated checks
-- Smart contract deployment to Tempo Testnet
+Inputs and outputs are stored as SHA-256 hashes. Raw data is retained temporarily during the dispute window only, then purged.
 
-### Planned
-- Reputation scoring algorithm
-- Admin moderation tools
-- User profiles + seller analytics
-- Blockchain event listener service
-- UI polish, animations, mobile optimization
+**Payments**
 
-## Tech Stack
+All payments use `transferWithMemo` with the escrow ID as the memo field. This makes every payment traceable for dispute resolution without requiring off-chain coordination.
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
-| **Wallet** | wagmi v2, viem, SIWE |
-| **State** | Zustand (client), TanStack Query (server) |
-| **Backend** | Node.js 20+, Express, Prisma, PostgreSQL, Redis, BullMQ |
-| **Blockchain** | Tempo Testnet, Solidity, Foundry |
-| **Auth** | NextAuth.js v5 (wallet-based SIWE) |
+**Wallet auth**
 
-## Documentation
+SIWE with nonce validation, chain ID enforcement, and expiry checks via NextAuth.js v5.
 
-See for the complete project specification including smart contract specs, API routes, database schema, and UI requirements.
+---
+
+## Trust Model
+
+| Layer | Mechanism |
+|---|---|
+| Pre-listing | Automated execution checks + manual review before any agent goes live |
+| Disclosure | Mandatory "what it does NOT do" section on every listing |
+| Escrow | Buyer funds held on-chain; released on acceptance or after 7-day auto-release |
+| Reviews | Outcome questions only: "Did it do what it claimed?", "Would you use it again?" |
+
+Agents above a 20% dispute rate are flagged for review. Above 40%, they are auto-delisted.
+
+---
 
 ## License
 

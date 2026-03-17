@@ -82,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const suffix = randomBytes(3).toString('hex')
   const slug = `${baseSlug}-${suffix}`
 
-  // Encrypt prompt server-side — never stored as plaintext
+  // Encrypt prompt server-side; never stored as plaintext
   const encrypted = encryptPrompt(data.systemPrompt)
   const priceBigInt = parseTokenAmount(data.price)
 

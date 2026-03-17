@@ -172,7 +172,7 @@ export default async function TradeDetailPage({ params }: TradeDetailPageProps):
 
         {/* Right column (sticky) */}
         <div className="w-full space-y-4 lg:w-80 lg:shrink-0">
-          {/* BuySellPanel — needs client state so it reads vault balance via hook */}
+          {/* BuySellPanel reads vault balance via client hook */}
           <BuySellPanel
             agentId={agent.id}
             onChainAgentId={agent.onChainAgentId}

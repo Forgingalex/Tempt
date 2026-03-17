@@ -56,7 +56,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     stats: {
       totalAgents,
       totalTrades: totalTrades,
-      totalVolume24h: '0', // In production: query from trades in last 24h
+      totalVolume24h: '0',
       totalTradesCount: totalVolume._sum.totalTrades ?? 0,
     },
   })

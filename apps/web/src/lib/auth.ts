@@ -64,7 +64,7 @@ const nextAuth = NextAuth({
           return null
         }
 
-        // Consume nonce — single-use
+        // Consume nonce (single-use)
         const nonceValid = nonceStore.consume(nonce)
         if (!nonceValid) {
           return null
@@ -100,7 +100,7 @@ const nextAuth = NextAuth({
           userId = user.id
           role = user.role
         } catch {
-          // DB unavailable — fall back to wallet address as ID.
+          // DB unavailable; fall back to wallet address as ID.
           // Auth still works; features requiring DB will handle missing records.
         }
 

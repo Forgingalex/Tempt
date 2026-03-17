@@ -44,7 +44,7 @@ class NonceStore {
   }
 }
 
-// Singleton — survives hot reloads in dev
+// Singleton; persists across hot reloads in dev
 const globalForNonce = globalThis as unknown as {
   nonceStore: NonceStore | undefined
 }

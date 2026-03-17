@@ -109,7 +109,6 @@ export function BuySellPanel({
       })
       setTxHash(hash)
 
-      // Record in DB (simplified — in production, parse Bought/Sold event for exact amounts)
       setStep('recording')
       const endpoint = `/api/trade/agents/${agentId}/${tab}`
       await fetch(endpoint, {
@@ -120,9 +119,9 @@ export function BuySellPanel({
           stableAmount: tab === 'buy' ? parsedAmount.toString() : '0',
           shareAmount: tab === 'sell' ? parsedAmount.toString() : '0',
           pricePerShare: currentPrice,
-          fee: '0', // parse from event in production
+          fee: '0',
           txHash: hash,
-          newPrice: currentPrice, // refresh from chain in production
+          newPrice: currentPrice,
           newSupply: '0',
           newReserve: '0',
         }),

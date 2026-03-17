@@ -31,7 +31,7 @@ interface PurchaseFlowProps {
   agentDbId: string
   agentName: string
   onChainId: number | null
-  /** Serialized bigint — price in TIP-20 units (6 decimals) */
+  /** Price in TIP-20 units (6 decimals), serialized as string to avoid bigint serialization issues */
   price: string
   /** TIP-20 token address */
   paymentToken: string
@@ -65,7 +65,6 @@ export function PurchaseFlow({
   const isAuthenticated = sessionStatus === 'authenticated'
   const explorerUrl = process.env.NEXT_PUBLIC_TEMPO_EXPLORER_URL || 'https://explore.tempo.xyz'
 
-  // — Check if user already has an active purchase —
   const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
     queryKey: ['my-purchases', agentDbId],
     queryFn: async (): Promise<{ purchases: Purchase[] }> => {
@@ -83,7 +82,6 @@ export function PurchaseFlow({
       (p.status === 'escrowed' || p.status === 'accepted' || p.status === 'auto_released')
   )
 
-  // — Read TIP-20 balance, allowance, and symbol —
   const { data: reads, refetch: refetchReads } = useReadContracts({
     contracts: [
       {
@@ -114,22 +112,18 @@ export function PurchaseFlow({
   const allowance = reads?.[1]?.result as bigint | undefined
   const tokenSymbol = (reads?.[2]?.result as string | undefined) || 'TOKEN'
 
-  // — Write contract —
   const { writeContractAsync } = useWriteContract()
 
-  // — Wait for approve tx —
   const { data: approveReceipt } = useWaitForTransactionReceipt({
     hash: approveTxHash,
     query: { enabled: !!approveTxHash },
   })
 
-  // — Wait for purchase tx —
   const { data: purchaseReceipt } = useWaitForTransactionReceipt({
     hash: purchaseTxHash,
     query: { enabled: !!purchaseTxHash },
   })
 
-  // Effect: approve confirmed
   useEffect(() => {
     if (!approveReceipt || !isApproving) return
     setIsApproving(false)
@@ -137,7 +131,6 @@ export function PurchaseFlow({
     void refetchReads()
   }, [approveReceipt, isApproving, refetchReads])
 
-  // Effect: purchase confirmed
   useEffect(() => {
     if (!purchaseReceipt || !isPurchasing || !purchaseTxHash) return
 
@@ -152,7 +145,6 @@ export function PurchaseFlow({
     void recordPurchaseInDb(purchaseTxHash, purchaseReceipt.logs)
   }, [purchaseReceipt, isPurchasing, purchaseTxHash])
 
-  // Effect: countdown after success
   useEffect(() => {
     if (!successTxHash) return
     const timer = setInterval(() => {
@@ -184,7 +176,7 @@ export function PurchaseFlow({
           escrowId = Number(decoded.args.escrowId)
           break
         } catch {
-          // Not the EscrowCreated event — continue
+          // Not the EscrowCreated event; skip
         }
       }
 
@@ -204,12 +196,12 @@ export function PurchaseFlow({
           setSuccessTxHash(txHash)
           setCountdown(3)
         } else {
-          // Purchase went on-chain but DB record failed — still show success
+          // Purchase confirmed on-chain; DB record failed but still show success
           setSuccessTxHash(txHash)
           setCountdown(3)
         }
       } catch {
-        // Network error recording — still show success since on-chain tx confirmed
+        // Network error on DB record; on-chain tx confirmed so still show success
         setSuccessTxHash(txHash)
         setCountdown(3)
       }
@@ -261,7 +253,6 @@ export function PurchaseFlow({
     }
   }
 
-  // Derived state
   const isBusy = isApproving || isPurchasing || !!approveTxHash || !!purchaseTxHash
   const hasInsufficientBalance = balance !== undefined && balance < priceBigInt
   const needsApproval = allowance !== undefined && allowance < priceBigInt
@@ -269,7 +260,6 @@ export function PurchaseFlow({
     priceBigInt - (priceBigInt * BigInt(ESCROW_CONFIG.PLATFORM_FEE_BPS)) / 10000n
   const platformFeePercent = ESCROW_CONFIG.PLATFORM_FEE_BPS / 100
 
-  // — STATE: Already purchased —
   if (activePurchase && !successTxHash) {
     return (
       <div className="space-y-4">
@@ -286,7 +276,6 @@ export function PurchaseFlow({
     )
   }
 
-  // — STATE: Success —
   if (successTxHash) {
     return (
       <div className="space-y-4">
@@ -317,7 +306,6 @@ export function PurchaseFlow({
     )
   }
 
-  // — LOADING —
   if (purchasesLoading && isAuthenticated) {
     return (
       <div className="space-y-3">
@@ -327,7 +315,6 @@ export function PurchaseFlow({
     )
   }
 
-  // — MAIN PURCHASE UI —
   const priceFormatted = formatCurrency(priceBigInt, tokenSymbol)
   const balanceFormatted =
     balance !== undefined
@@ -391,7 +378,6 @@ export function PurchaseFlow({
         </div>
       )}
 
-      {/* — Action Button — */}
       {!isConnected || !isAuthenticated ? (
         <Button className="w-full" size="lg" disabled>
           Connect wallet to purchase

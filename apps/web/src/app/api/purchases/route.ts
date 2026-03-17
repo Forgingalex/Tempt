@@ -80,7 +80,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ message: 'Transaction was reverted on-chain' }, { status: 400 })
     }
   } catch {
-    // RPC might be unavailable — proceed but log the skip
+    // RPC might be unavailable; proceed but log the skip
     console.warn('[purchases] Could not verify tx on-chain, proceeding optimistically:', txHash)
   }
 

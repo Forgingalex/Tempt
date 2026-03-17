@@ -25,7 +25,7 @@ export function BondingCurveChart({
       const supply = (capNum / points) * i
       // Square-root bonding curve: price = reserve/supply
       // With initial reserve=10 (6dec) and initial supply=1000 (18dec)
-      // price ≈ (10 + supply * initialPrice) / (1000 + supply) simplified for display
+      // price ≈ (10 + supply * initialPrice) / (1000 + supply), approximation for chart display
       const initialPrice = 0.01 // $0.01 starting price
       const price = initialPrice * (1 + supply / 1000) ** 2 // approximation
       return { supply: supply / 1e6, price } // display in millions

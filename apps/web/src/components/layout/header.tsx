@@ -208,7 +208,6 @@ export function Header(): React.ReactElement {
               </div>
             )}
 
-            {/* Wallet — functional */}
             <button
               onClick={handleWalletConnect}
               disabled={isLoading}
@@ -229,7 +228,6 @@ export function Header(): React.ReactElement {
               </div>
             </button>
 
-            {/* Twitter — coming soon */}
             <button
               disabled
               className="flex cursor-not-allowed items-center gap-4 rounded-lg border border-border p-4 text-left opacity-50"
@@ -248,7 +246,6 @@ export function Header(): React.ReactElement {
               </div>
             </button>
 
-            {/* Email — coming soon */}
             <button
               disabled
               className="flex cursor-not-allowed items-center gap-4 rounded-lg border border-border p-4 text-left opacity-50"
