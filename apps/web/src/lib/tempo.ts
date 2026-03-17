@@ -58,9 +58,17 @@ export const TIP20_DECIMALS = 6
  * Platform contract addresses (to be filled after deployment)
  */
 export const PLATFORM_CONTRACTS = {
+  // Marketplace contracts
   AGENT_REGISTRY: (process.env.NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS || '') as `0x${string}`,
   MARKETPLACE_ESCROW: (process.env.NEXT_PUBLIC_MARKETPLACE_ESCROW_ADDRESS || '') as `0x${string}`,
   DEFAULT_PAYMENT_TOKEN: (process.env.NEXT_PUBLIC_PAYMENT_TOKEN_ADDRESS || '') as `0x${string}`,
+  // Trade system contracts
+  TRADE_AGENT_REGISTRY: (process.env.NEXT_PUBLIC_TRADE_AGENT_REGISTRY_ADDRESS || '') as `0x${string}`,
+  SHARE_TOKEN_FACTORY: (process.env.NEXT_PUBLIC_SHARE_TOKEN_FACTORY_ADDRESS || '') as `0x${string}`,
+  BONDING_CURVE_MARKET: (process.env.NEXT_PUBLIC_BONDING_CURVE_MARKET_ADDRESS || '') as `0x${string}`,
+  TRADING_VAULT: (process.env.NEXT_PUBLIC_TRADING_VAULT_ADDRESS || '') as `0x${string}`,
+  FEE_ROUTER: (process.env.NEXT_PUBLIC_FEE_ROUTER_ADDRESS || '') as `0x${string}`,
+  STAKING_AND_SLASHING: (process.env.NEXT_PUBLIC_STAKING_AND_SLASHING_ADDRESS || '') as `0x${string}`,
 } as const
 
 /**

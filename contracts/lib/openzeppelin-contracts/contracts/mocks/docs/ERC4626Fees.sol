@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {IERC20} from "../../token/ERC20/IERC20.sol";
-import {ERC4626} from "../../token/ERC20/extensions/ERC4626.sol";
-import {SafeERC20} from "../../token/ERC20/utils/SafeERC20.sol";
-import {Math} from "../../utils/math/Math.sol";
+import "../../token/ERC20/extensions/ERC4626.sol";
 
-/// @dev ERC-4626 vault with entry/exit fees expressed in https://en.wikipedia.org/wiki/Basis_point[basis point (bp)].
-///
-/// NOTE: The contract charges fees in terms of assets, not shares. This means that the fees are calculated based on the
-/// amount of assets that are being deposited or withdrawn, and not based on the amount of shares that are being minted or
-/// redeemed. This is an opinionated design decision that should be taken into account when integrating this contract.
-///
-/// WARNING: This contract has not been audited and shouldn't be considered production ready. Consider using it with caution.
+/// @dev ERC4626 vault with entry/exit fees expressed in https://en.wikipedia.org/wiki/Basis_point[basis point (bp)].
 abstract contract ERC4626Fees is ERC4626 {
     using Math for uint256;
 
@@ -33,7 +24,7 @@ abstract contract ERC4626Fees is ERC4626 {
         return assets + _feeOnRaw(assets, _entryFeeBasisPoints());
     }
 
-    /// @dev Preview adding an exit fee on withdrawal. See {IERC4626-previewWithdraw}.
+    /// @dev Preview adding an exit fee on withdraw. See {IERC4626-previewWithdraw}.
     function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
         uint256 fee = _feeOnRaw(assets, _exitFeeBasisPoints());
         return super.previewWithdraw(assets + fee);
@@ -98,12 +89,12 @@ abstract contract ERC4626Fees is ERC4626 {
     /// @dev Calculates the fees that should be added to an amount `assets` that does not already include fees.
     /// Used in {IERC4626-mint} and {IERC4626-withdraw} operations.
     function _feeOnRaw(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
-        return assets.mulDiv(feeBasisPoints, _BASIS_POINT_SCALE, Math.Rounding.Ceil);
+        return assets.mulDiv(feeBasisPoints, _BASIS_POINT_SCALE, Math.Rounding.Up);
     }
 
     /// @dev Calculates the fee part of an amount `assets` that already includes fees.
     /// Used in {IERC4626-deposit} and {IERC4626-redeem} operations.
     function _feeOnTotal(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
-        return assets.mulDiv(feeBasisPoints, feeBasisPoints + _BASIS_POINT_SCALE, Math.Rounding.Ceil);
+        return assets.mulDiv(feeBasisPoints, feeBasisPoints + _BASIS_POINT_SCALE, Math.Rounding.Up);
     }
 }

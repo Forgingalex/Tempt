@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {ERC721} from "../patched/token/ERC721/ERC721.sol";
+import "../patched/token/ERC721/ERC721.sol";
 
 contract ERC721Harness is ERC721 {
     constructor(string memory name, string memory symbol) ERC721(name, symbol) {}
@@ -23,8 +23,8 @@ contract ERC721Harness is ERC721 {
         _burn(tokenId);
     }
 
-    function unsafeBalanceOf(address owner) public view returns (uint256) {
-        return _balances[owner];
+    function tokenExists(uint256 tokenId) external view returns (bool) {
+        return _exists(tokenId);
     }
 
     function unsafeOwnerOf(uint256 tokenId) external view returns (address) {

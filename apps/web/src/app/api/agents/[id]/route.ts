@@ -7,6 +7,7 @@ import { parseTokenAmount } from '@/lib/utils'
 // CRITICAL: encryptedPrompt is NEVER included
 const publicAgentSelect = {
   id: true,
+  onChainId: true,
   slug: true,
   name: true,
   description: true,

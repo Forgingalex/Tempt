@@ -258,3 +258,88 @@ model AgentVersion {
   changelog String
   createdAt DateTime @default(now())
 }
+
+// ============================================================================
+// TRADE SYSTEM
+// ============================================================================
+
+model TradeableAgent {
+  id                String           @id @default(cuid())
+  onChainAgentId    Int              @unique
+  creator           String
+  metadataUri       String
+  codeHash          String
+  name              String
+  symbol            String
+  description       String
+  imageUrl          String?
+  shareTokenAddress String?
+  supplyCap         String
+  bondAmount        String
+  creatorFeeBps     Int
+  status            TradeAgentStatus @default(ACTIVE)
+  currentPrice      String           @default("0")
+  currentSupply     String           @default("0")
+  reserveBalance    String           @default("0")
+  totalVolume       String           @default("0")
+  totalTrades       Int              @default(0)
+  holders           Int              @default(0)
+  priceChange24h    Float            @default(0)
+  trades            Trade[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+enum TradeAgentStatus {
+  ACTIVE
+  PAUSED
+  DELISTED
+  SLASHED
+}
+
+model Trade {
+  id            String         @id @default(cuid())
+  agentId       String
+  agent         TradeableAgent @relation(fields: [agentId], references: [id])
+  trader        String
+  type          TradeType
+  stableAmount  String
+  shareAmount   String
+  pricePerShare String
+  txHash        String         @unique
+  fee           String
+  createdAt     DateTime       @default(now())
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
+
+model VaultBalance {
+  id        String   @id @default(cuid())
+  user      String
+  token     String
+  balance   String   @default("0")
+  updatedAt DateTime @updatedAt
+
+  @@unique([user, token])
+}
+
+model VaultTransaction {
+  id        String      @id @default(cuid())
+  user      String
+  token     String
+  amount    String
+  type      VaultTxType
+  txHash    String      @unique
+  agentId   String?
+  createdAt DateTime    @default(now())
+}
+
+enum VaultTxType {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE_DEBIT
+  TRADE_CREDIT
+}

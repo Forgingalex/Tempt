@@ -1,12 +1,34 @@
-= Cross chain interoperability
+= Cross Chain Awareness
 
 [.readme-notice]
 NOTE: This document is better viewed at https://docs.openzeppelin.com/contracts/api/crosschain
 
-This directory contains contracts for sending and receiving cross chain messages that follows the ERC-7786 standard.
+This directory provides building blocks to improve cross-chain awareness of smart contracts.
 
-- {ERC7786Recipient}: generic ERC-7786 crosschain contract that receives messages from a trusted gateway
+- {CrossChainEnabled} is an abstraction that contains accessors and modifiers to control the execution flow when receiving cross-chain messages.
 
-== Helpers
+== CrossChainEnabled specializations
 
-{{ERC7786Recipient}}
+The following specializations of {CrossChainEnabled} provide implementations of the {CrossChainEnabled} abstraction for specific bridges. This can be used to complex cross-chain aware components such as {AccessControlCrossChain}.
+
+{{CrossChainEnabledAMB}}
+
+{{CrossChainEnabledArbitrumL1}}
+
+{{CrossChainEnabledArbitrumL2}}
+
+{{CrossChainEnabledOptimism}}
+
+{{CrossChainEnabledPolygonChild}}
+
+== Libraries for cross-chain
+
+In addition to the {CrossChainEnabled} abstraction, cross-chain awareness is also available through libraries. These libraries can be used to build complex designs such as contracts with the ability to interact with multiple bridges.
+
+{{LibAMB}}
+
+{{LibArbitrumL1}}
+
+{{LibArbitrumL2}}
+
+{{LibOptimism}}

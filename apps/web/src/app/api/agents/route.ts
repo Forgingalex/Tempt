@@ -10,6 +10,7 @@ import { randomBytes } from 'crypto'
 // CRITICAL: encryptedPrompt is NEVER included in any select
 const publicAgentSelect = {
   id: true,
+  onChainId: true,
   slug: true,
   name: true,
   description: true,

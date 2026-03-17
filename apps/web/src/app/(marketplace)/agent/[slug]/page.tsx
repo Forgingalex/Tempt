@@ -1,15 +1,111 @@
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PurchaseFlow } from '@/components/agent/PurchaseFlow'
+import { AgentHeader } from '@/components/agent/AgentHeader'
+import { DemoSection } from '@/components/agent/DemoSection'
+import { ReviewSection } from '@/components/agent/ReviewSection'
+import { prisma } from '@/lib/db'
+import { shortenAddress } from '@/lib/utils'
+import type { AgentInput, AgentDemo } from '@tempt/types'
 
 interface AgentPageProps {
   params: Promise<{ slug: string }>
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  WRITING: 'Writing',
+  CODING: 'Coding',
+  ART: 'Art & Creative',
+  AUTOMATION: 'Automation',
+  RESEARCH: 'Research',
+  OTHER: 'Other',
+}
+
 export default async function AgentPage({ params }: AgentPageProps): Promise<React.ReactElement> {
   const { slug } = await params
+
+  // Fetch agent — accept slug or ID
+  const agent = await prisma.agent.findFirst({
+    where: {
+      OR: [{ slug }, { id: slug }],
+      status: { in: ['LISTED', 'APPROVED'] },
+    },
+    select: {
+      id: true,
+      onChainId: true,
+      slug: true,
+      name: true,
+      description: true,
+      doesNotDo: true,
+      category: true,
+      tags: true,
+      inputs: true,
+      outputFormat: true,
+      demos: true,
+      price: true,
+      paymentToken: true,
+      licenseType: true,
+      usageLimit: true,
+      status: true,
+      totalSales: true,
+      totalExecutions: true,
+      acceptanceRate: true,
+      disputeRate: true,
+      repeatBuyerRate: true,
+      sellerId: true,
+      createdAt: true,
+      seller: {
+        select: {
+          id: true,
+          walletAddress: true,
+          displayName: true,
+        },
+      },
+      reviews: {
+        select: {
+          didWhatItClaimed: true,
+          wasSetupClear: true,
+          wouldUseAgain: true,
+        },
+      },
+      versions: {
+        select: {
+          version: true,
+          changelog: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+      },
+    },
+  })
+
+  if (!agent) notFound()
+
+  const inputs = (agent.inputs as unknown as AgentInput[]) ?? []
+  const demos = (agent.demos as unknown as AgentDemo[]) ?? []
+  const categoryLabel = CATEGORY_LABELS[agent.category] ?? agent.category
+  const sellerDisplay = agent.seller.displayName || shortenAddress(agent.seller.walletAddress)
+
+  // Review stats
+  const totalReviews = agent.reviews.length
+  const reviewStats = {
+    total: totalReviews,
+    acceptanceRate:
+      totalReviews > 0
+        ? agent.reviews.filter((r) => r.didWhatItClaimed === 'YES').length / totalReviews
+        : 0,
+    wouldUseAgainRate:
+      totalReviews > 0
+        ? agent.reviews.filter((r) => r.wouldUseAgain).length / totalReviews
+        : 0,
+    setupClearRate:
+      totalReviews > 0
+        ? agent.reviews.filter((r) => r.wasSetupClear).length / totalReviews
+        : 0,
+  }
 
   return (
     <main className="mx-auto max-w-8xl px-6 py-8">
@@ -19,48 +115,34 @@ export default async function AgentPage({ params }: AgentPageProps): Promise<Rea
           Explore
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <Link href="/explore?category=coding" className="transition-colors hover:text-foreground">
-          Coding
+        <Link
+          href={`/explore?category=${agent.category.toLowerCase()}`}
+          className="transition-colors hover:text-foreground"
+        >
+          {categoryLabel}
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-foreground">{slug}</span>
+        <span className="text-foreground">{agent.name}</span>
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main Content */}
         <div className="lg:col-span-2">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="mb-3 flex items-center gap-2">
-              <Badge variant="secondary">Coding</Badge>
-              <Badge variant="success">Verified</Badge>
-            </div>
-            <h1 className="mb-2 text-3xl font-bold">{slug}</h1>
-            <p className="text-sm text-muted-foreground">
-              by{' '}
-              <Link href="/profile/0x1234" className="text-foreground underline-offset-4 hover:underline">
-                0x1234...5678
-              </Link>
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { label: 'Uses', value: '--' },
-              { label: 'Acceptance', value: '--%' },
-              { label: 'Disputes', value: '--%' },
-              { label: 'Repeat Buyers', value: '--%' },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-lg border border-border bg-card p-3 text-center"
-              >
-                <div className="text-xl font-bold">{stat.value}</div>
-                <div className="text-xs text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          <AgentHeader
+            name={agent.name}
+            slug={agent.slug}
+            category={agent.category}
+            status={agent.status}
+            sellerAddress={agent.seller.walletAddress}
+            sellerId={agent.seller.id}
+            sellerName={agent.seller.displayName}
+            totalSales={agent.totalSales}
+            totalExecutions={agent.totalExecutions}
+            acceptanceRate={agent.acceptanceRate}
+            disputeRate={agent.disputeRate}
+            price={String(agent.price)}
+            paymentToken={agent.paymentToken}
+          />
 
           {/* Description */}
           <Card className="mb-4">
@@ -68,97 +150,128 @@ export default async function AgentPage({ params }: AgentPageProps): Promise<Rea
               <CardTitle className="text-base">What This Agent Does</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Agent description will appear here...</p>
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {agent.description}
+              </p>
+              {agent.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {agent.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* What It Does NOT Do */}
-          <Card className="mb-4 border-foreground/10">
+          <Card className="mb-4 border-border/60">
             <CardHeader>
               <CardTitle className="text-base text-muted-foreground">
                 What This Agent Does NOT Do
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Limitations and exclusions will appear here...
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {agent.doesNotDo}
               </p>
             </CardContent>
           </Card>
 
-          {/* Demo Section */}
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle className="text-base">Demo Examples</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="rounded-lg bg-secondary p-4">
-                  <div className="mb-1 text-xs font-medium text-muted-foreground">Input</div>
-                  <p className="font-mono text-sm">Example input will appear here...</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-4">
-                  <div className="mb-1 text-xs font-medium text-muted-foreground">Output</div>
-                  <p className="font-mono text-sm">Example output will appear here...</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Demos */}
+          <DemoSection demos={demos} inputs={inputs} />
 
           {/* Reviews */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Reviews</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6 grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Did what it claimed', value: '--%' },
-                  { label: 'Would use again', value: '--%' },
-                  { label: 'Setup was clear', value: '--%' },
-                ].map((stat) => (
-                  <div key={stat.label} className="rounded-lg bg-secondary p-4 text-center">
-                    <div className="text-xl font-bold">{stat.value}</div>
-                    <div className="text-xs text-muted-foreground">{stat.label}</div>
+          <ReviewSection stats={reviewStats} />
+
+          {/* Version history */}
+          {agent.versions.length > 0 && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="text-base">Version History</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {agent.versions.map((v) => (
+                  <div key={v.version} className="flex gap-3">
+                    <div className="mt-0.5 text-xs font-mono text-muted-foreground">
+                      v{v.version}
+                    </div>
+                    <div>
+                      <p className="text-sm">{v.changelog}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(v.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
                 ))}
-              </div>
-              <p className="text-center text-sm text-muted-foreground">No reviews yet.</p>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-24">
-            <CardContent className="pt-6">
-              <div className="mb-6 text-center">
-                <div className="text-3xl font-bold">-- USD</div>
-                <div className="text-sm text-muted-foreground">One-time purchase</div>
-              </div>
-              <Button className="mb-3 w-full" size="lg">
-                Purchase Agent
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                Payment held in escrow until you accept
-              </p>
-              <div className="mt-6 border-t border-border pt-4">
-                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Creator
-                </h4>
-                <Link
-                  href="/profile/0x1234"
-                  className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-accent"
-                >
-                  <div className="h-8 w-8 rounded-full bg-secondary" />
-                  <div>
-                    <div className="text-sm font-medium">0x1234...5678</div>
-                    <div className="text-xs text-muted-foreground">-- agents listed</div>
+          <div className="sticky top-24 space-y-4">
+            {/* Purchase Card */}
+            <div className="rounded-lg border border-border bg-card p-5">
+              <PurchaseFlow
+                agentDbId={agent.id}
+                agentName={agent.name}
+                onChainId={agent.onChainId}
+                price={String(agent.price)}
+                paymentToken={agent.paymentToken}
+                licenseType={agent.licenseType}
+                usageLimit={agent.usageLimit}
+              />
+            </div>
+
+            {/* Creator */}
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Creator
+              </h4>
+              <Link
+                href={`/profile/${agent.seller.walletAddress}`}
+                className="flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-accent"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-semibold">
+                  {sellerDisplay.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-sm font-medium">{sellerDisplay}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {agent.totalSales} completed sale{agent.totalSales === 1 ? '' : 's'}
                   </div>
-                </Link>
+                </div>
+              </Link>
+            </div>
+
+            {/* Agent metadata */}
+            <div className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground space-y-1.5">
+              <div className="flex justify-between">
+                <span>Output format</span>
+                <span className="capitalize">{agent.outputFormat.toLowerCase()}</span>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex justify-between">
+                <span>License</span>
+                <span>{agent.licenseType === 'ONE_TIME' ? 'One-time' : 'Usage-based'}</span>
+              </div>
+              {agent.usageLimit && (
+                <div className="flex justify-between">
+                  <span>Uses per purchase</span>
+                  <span>{agent.usageLimit}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Listed</span>
+                <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

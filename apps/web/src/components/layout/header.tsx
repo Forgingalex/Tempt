@@ -64,6 +64,12 @@ export function Header(): React.ReactElement {
               >
                 Create
               </Link>
+              <Link
+                href="/trade"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                Trade
+              </Link>
             </nav>
           </div>
 
@@ -172,6 +178,13 @@ export function Header(): React.ReactElement {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Create
+              </Link>
+              <Link
+                href="/trade"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Trade
               </Link>
             </nav>
           </div>
